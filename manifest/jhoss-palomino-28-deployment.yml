@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jhoss-palomino-28-deployment
+  namespace: jhoss-palomino-28-namespace
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jhoss-palomino-28-deployment
+  template:
+    metadata:
+      labels:
+        app: jhoss-palomino-28-deployment
+    spec:
+      containers:
+        - name: jhoss-palomino-28-container
+          image: jhosspalomino/external-api-be:1.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: jhoss-palomino-28-secret
+          ports:
+            - containerPort: 8080

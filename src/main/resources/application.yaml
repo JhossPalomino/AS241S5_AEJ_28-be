@@ -1,30 +1,30 @@
 server:
-  port: 8085
+  port: ${PORT:8085}
 
 spring:
   application:
     name: external.apis
   data:
     mongodb:
-      database: external
-      uri: mongodb+srv://jhosspalominobenito_db:dinosaurio1234@cluster0.e5hdcrv.mongodb.net/?appName=Cluster0
+      database: ${DATABASE_NAME:external}
+      uri: ${DATABASE_URL:mongodb+srv://jhosspalominobenito_db:dinosaurio1234@cluster0.e5hdcrv.mongodb.net/?appName=Cluster0}
 
 
 rapidapi:
   youtube:
-    url: https://youtube-info-download-api.p.rapidapi.com
-    host: youtube-info-download-api.p.rapidapi.com
-    apikey: 1c2345624amshd115f6e96b32280p1a6562jsn59b2ac2c4c07
+    url: ${YOUTUBE_URL:https://youtube-info-download-api.p.rapidapi.com}
+    host: ${YOUTUBE_HOST:youtube-info-download-api.p.rapidapi.com}
+    apikey: ${YOUTUBE_APIKEY:1c2345624amshd115f6e96b32280p1a6562jsn59b2ac2c4c07}
 
   translate:
-    url: https://deep-translate1.p.rapidapi.com/language/translate/v2
-    host: deep-translate1.p.rapidapi.com
-    apikey: 1c2345624amshd115f6e96b32280p1a6562jsn59b2ac2c4c07
+    url: ${TRANSLATE_URL:https://deep-translate1.p.rapidapi.com/language/translate/v2}
+    host: ${TRANSLATE_HOST:deep-translate1.p.rapidapi.com}
+    apikey: ${TRANSLATE_APIKEY:1c2345624amshd115f6e96b32280p1a6562jsn59b2ac2c4c07}
 
   tts:
-    url: https://streamlined-edge-tts.p.rapidapi.com/tts
-    host: streamlined-edge-tts.p.rapidapi.com
-    apikey: 1c2345624amshd115f6e96b32280p1a6562jsn59b2ac2c4c07
+    url: ${TTS_URL:https://streamlined-edge-tts.p.rapidapi.com/tts}
+    host: ${TTS_HOST:streamlined-edge-tts.p.rapidapi.com}
+    apikey: ${TTS_APIKEY:1c2345624amshd115f6e96b32280p1a6562jsn59b2ac2c4c07}
 
 
 springdoc:
