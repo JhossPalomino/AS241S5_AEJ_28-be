@@ -19,6 +19,7 @@ import vallegrande.dto.translate.LanguagesResponse;
 import vallegrande.model.DeepTranslate;
 import vallegrande.repository.DeepTranslateRepository;
 import vallegrande.service.DeepTranslateService;
+import reactor.core.publisher.Flux;
 
 @Service
 public class DeepTransladeServiceImpl implements DeepTranslateService {
@@ -54,14 +55,15 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         translation.setTargetLanguage(targetLang);
                         translation.setOriginalText(text);
                         translation.setTranslatedText(translatedText);
+                        translation.setStatus(true);
                         translation.setCreatedAt(Instant.now());
 
-                        return translation; // aquí devuelves el objeto, no un Mono
+                        return translation; 
                     } catch (Exception e) {
                         throw new RuntimeException("Error processing translation response", e);
                     }
                 })
-                .flatMap(repository::save); // aquí sí persistes de manera reactiva
+                .flatMap(repository::save);
     }
 
     @Override
@@ -112,5 +114,45 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                     }
                 });
     }
+   
+   @Override
+   public Flux<DeepTranslate> getAllTranslations() {
+       return repository.findAll();
+    }
 
+    @Override
+    public Mono<DeepTranslate> getTranslationById(String id) {
+        return repository.findById(id);
+    }
+
+    @Override
+    public Mono<DeepTranslate> updateTranslation(String id, DeepTranslate data) {
+        return repository.findById(id)
+                .flatMap(existing -> {
+                    existing.setOriginalText(data.getOriginalText());
+                    existing.setTranslatedText(data.getTranslatedText());
+                    existing.setSourceLanguage(data.getSourceLanguage());
+                    existing.setTargetLanguage(data.getTargetLanguage());
+                    existing.setStatus(data.getStatus());
+                    return repository.save(existing);
+                });
+    }
+
+    @Override
+    public Mono<DeepTranslate> deleteTranslation(String id) {
+        return repository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStatus(false);
+                    return repository.save(existing);
+                });
+    }
+
+    @Override
+    public Mono<DeepTranslate> restoreTts(String id) {
+        return repository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStatus(true);
+                    return repository.save(existing);
+                });
+    }
 }

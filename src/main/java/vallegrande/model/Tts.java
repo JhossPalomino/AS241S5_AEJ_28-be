@@ -15,4 +15,5 @@ public class Tts {
     private String voice;
     private String audioFileId;
     private LocalDateTime createdAt;
+    private Boolean status;
 }

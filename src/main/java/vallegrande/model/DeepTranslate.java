@@ -18,4 +18,6 @@ public class DeepTranslate {
     private String originalText;
     private String translatedText;
     private Instant createdAt;
+    private Boolean status;
+    
 }

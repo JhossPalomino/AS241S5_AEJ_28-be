@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.gridfs.ReactiveGridFsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import vallegrande.model.Tts;
 import vallegrande.repository.TtsRepository;
@@ -69,7 +70,47 @@ public class TtsImpl implements TtsService {
                             history.setVoice(voice);
                             history.setAudioFileId(fileId);
                             history.setCreatedAt(LocalDateTime.now());
+                            history.setStatus(true);
                             return repository.save(history);
                         }));
+    }
+
+    @Override
+    public Flux<Tts> getAllTts() {
+        return repository.findAll();
+    }
+
+    @Override
+    public Mono<Tts> getTtsById(String id) {
+        return repository.findById(id);
+    }
+
+    @Override
+    public Mono<Tts> updateTts(String id, Tts data) {
+        return repository.findById(id)
+                .flatMap(existing -> {
+                    existing.setText(data.getText());
+                    existing.setVoice(data.getVoice());
+                    existing.setStatus(data.getStatus());
+                    return repository.save(existing);
+                });
+    }
+
+    @Override
+    public Mono<Tts> deleteTts(String id) {
+        return repository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStatus(false);
+                    return repository.save(existing);
+                });
+    }
+
+    @Override
+    public Mono<Tts> restoreTts(String id) {
+        return repository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStatus(true);
+                    return repository.save(existing);
+                });
     }
 }
