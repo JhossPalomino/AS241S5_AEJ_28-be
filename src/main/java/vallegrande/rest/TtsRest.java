@@ -38,6 +38,11 @@ public class TtsRest {
         return service.getAudio(fileId);
     }
 
+    @GetMapping("/audio/frontend/{fileId}")
+    public Mono<String> getAudioForFrontend(@PathVariable String fileId) {
+        return service.getAudioForFrontend(fileId);
+    }
+
     @GetMapping("/history")
     public Flux<Tts> getAllTts() {
         return service.getAllTts();

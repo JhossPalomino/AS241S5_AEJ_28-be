@@ -8,6 +8,7 @@ public interface TtsService {
 
     Mono<String> saveAudio(byte[] audio, String filename);
     Mono<byte[]> getAudio(String fileId);
+    Mono<String> getAudioForFrontend(String fileId);
     Mono<Tts> generateAndSave(String text, String voice);
     Flux<Tts> getAllTts();
     Mono<Tts> getTtsById(String id);

@@ -45,6 +45,20 @@ public class DeepTranslateRest {
                 });
     }
 
+    @PostMapping("/preview")
+    public Mono<TranslateResponse> translatePreview(@RequestBody TranslateRequest request) {
+        return service.translatePreview(request.getText(), request.getSourceLang(), request.getTargetLang())
+                .map(entity -> {
+                    TranslateResponse resp = new TranslateResponse();
+                    resp.setOriginalText(entity.getOriginalText());
+                    resp.setSourceLang(entity.getSourceLanguage());
+                    resp.setTargetLang(entity.getTargetLanguage());
+                    resp.setTranslatedText(entity.getTranslatedText());
+                    resp.setCreatedAt(entity.getCreatedAt().toString());
+                    return resp;
+                });
+    }
+
     @PostMapping("/detect")
     public Mono<DetectionResponse> detectLanguage(@RequestBody DetectionRequest request) {
         return service.detectLanguage(request.getText())

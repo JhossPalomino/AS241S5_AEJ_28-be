@@ -57,6 +57,15 @@ public class TtsImpl implements TtsService {
     }
 
     @Override
+    public Mono<String> getAudioForFrontend(String id) {
+        return repository.findById(id)
+                .flatMap(tts -> getAudio(tts.getAudioFileId())
+                        .map(bytes -> {
+                            return java.util.Base64.getEncoder().encodeToString(bytes);
+                        }));
+    }
+
+    @Override
     public Mono<Tts> generateAndSave(String voice, String text) {
         return webClient.post()
                 .uri("")
@@ -89,10 +98,21 @@ public class TtsImpl implements TtsService {
     public Mono<Tts> updateTts(String id, Tts data) {
         return repository.findById(id)
                 .flatMap(existing -> {
-                    existing.setText(data.getText());
-                    existing.setVoice(data.getVoice());
-                    existing.setStatus(data.getStatus());
-                    return repository.save(existing);
+                    return webClient.post()
+                            .uri("")
+                            .bodyValue(Map.of("voice", data.getVoice(), "text", data.getText()))
+                            .retrieve()
+                            .bodyToMono(byte[].class)
+                            .flatMap(audioBytes ->
+                    saveAudio(audioBytes, "tts_updated_" + System.currentTimeMillis() + ".mp3"))
+                            .flatMap(newFileId -> {
+                                existing.setText(data.getText());
+                                existing.setVoice(data.getVoice());
+                                existing.setStatus(data.getStatus());
+                                existing.setAudioFileId(newFileId);
+
+                                return repository.save(existing);
+                            });
                 });
     }
 

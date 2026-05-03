@@ -44,11 +44,14 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                 .map(response -> {
                     try {
                         JsonNode json = mapper.readTree(response);
-                        String translatedText = json.path("data")
+                        JsonNode translatedArray = json.path("data")
                                 .path("translations")
-                                .path("translatedText")
-                                .get(0)
-                                .asText();
+                                .path("translatedText");
+
+                        String translatedText = "";
+                        if (translatedArray.isArray() && translatedArray.size() > 0) {
+                            translatedText = translatedArray.get(0).asText();
+                        }
 
                         DeepTranslate translation = new DeepTranslate();
                         translation.setSourceLanguage(sourceLang);
@@ -58,12 +61,49 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         translation.setStatus(true);
                         translation.setCreatedAt(Instant.now());
 
-                        return translation; 
+                        return translation;
                     } catch (Exception e) {
                         throw new RuntimeException("Error processing translation response", e);
                     }
                 })
                 .flatMap(repository::save);
+    }
+
+    @Override
+    public Mono<DeepTranslate> translatePreview(String text, String sourceLang, String targetLang) {
+        return webClient.post()
+                .uri("") // baseUrl ya incluye /language/translate/v2
+                .bodyValue(Map.of("q", text, "source", sourceLang, "target", targetLang))
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(response -> {
+                    try {
+                        JsonNode json = mapper.readTree(response);
+                        
+                        // 👇 USAMOS LA MISMA LÓGICA DE EXTRACCIÓN QUE EN TRANSLATE
+                        JsonNode translatedArray = json.path("data")
+                                .path("translations")
+                                .path("translatedText");
+
+                        String translatedText = "";
+                        if (translatedArray.isArray() && translatedArray.size() > 0) {
+                            translatedText = translatedArray.get(0).asText();
+                        }
+
+                        DeepTranslate translation = new DeepTranslate();
+                        translation.setSourceLanguage(sourceLang);
+                        translation.setTargetLanguage(targetLang);
+                        translation.setOriginalText(text);
+                        translation.setTranslatedText(translatedText);
+                        translation.setStatus(true);
+                        translation.setCreatedAt(Instant.now());
+
+                        // Aquí NO se guarda en la base, solo se devuelve para previsualizar
+                        return translation;
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error processing translation response", e);
+                    }
+                });
     }
 
     @Override
@@ -114,10 +154,10 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                     }
                 });
     }
-   
-   @Override
-   public Flux<DeepTranslate> getAllTranslations() {
-       return repository.findAll();
+
+    @Override
+    public Flux<DeepTranslate> getAllTranslations() {
+        return repository.findAll();
     }
 
     @Override
