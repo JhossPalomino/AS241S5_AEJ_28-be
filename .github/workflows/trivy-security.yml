@@ -2,11 +2,11 @@ name: Trivy Security Scan
 
 on:
   push:
-    branches:
-      - develop
+    # branches:
+      #- develop
   pull_request:
-    branches:
-      - develop
+    # branches:
+      #- develop
   schedule:
       - cron: '0 13 * * *'
   workflow_dispatch: 

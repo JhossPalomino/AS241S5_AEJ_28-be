@@ -28,6 +28,7 @@ public class WebClientConfig {
     @Value("${rapidapi.tts.apikey}")
     private String ttsApiKey;
 
+    @SuppressWarnings("null")
     @Bean
     public WebClient youtubeWebClient() {
         return WebClient.builder()
@@ -37,6 +38,7 @@ public class WebClientConfig {
                 .build();
     }
 
+    @SuppressWarnings("null")
     @Bean
     public WebClient translateWebClient() {
         return WebClient.builder()
@@ -46,6 +48,7 @@ public class WebClientConfig {
                 .build();
     }
 
+    @SuppressWarnings("null")
     @Bean
     public WebClient ttsWebClient() {
         return WebClient.builder()
