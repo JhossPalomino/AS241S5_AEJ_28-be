@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 import vallegrande.dto.translate.DetectionResponse;
 import vallegrande.dto.translate.LanguageResponse;
 import vallegrande.dto.translate.LanguagesResponse;
+import vallegrande.exception.TranslationProcessingException;
 import vallegrande.model.DeepTranslate;
 import vallegrande.repository.DeepTranslateRepository;
 import vallegrande.service.DeepTranslateService;
@@ -37,7 +38,7 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
     @Override
     public Mono<DeepTranslate> translate(String text, String sourceLang, String targetLang) {
         return webClient.post()
-                .uri("") // baseUrl ya incluye /language/translate/v2
+                .uri("")
                 .bodyValue(Map.of("q", text, "source", sourceLang, "target", targetLang))
                 .retrieve()
                 .bodyToMono(String.class)
@@ -62,8 +63,8 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         translation.setCreatedAt(Instant.now());
 
                         return translation;
-                    } catch (Exception e) {
-                        throw new RuntimeException("Error processing translation response", e);
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        throw new TranslationProcessingException("Error parsing translation response", e);
                     }
                 })
                 .flatMap(repository::save);
@@ -72,15 +73,14 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
     @Override
     public Mono<DeepTranslate> translatePreview(String text, String sourceLang, String targetLang) {
         return webClient.post()
-                .uri("") // baseUrl ya incluye /language/translate/v2
+                .uri("")
                 .bodyValue(Map.of("q", text, "source", sourceLang, "target", targetLang))
                 .retrieve()
                 .bodyToMono(String.class)
                 .map(response -> {
                     try {
                         JsonNode json = mapper.readTree(response);
-                        
-                        // 👇 USAMOS LA MISMA LÓGICA DE EXTRACCIÓN QUE EN TRANSLATE
+
                         JsonNode translatedArray = json.path("data")
                                 .path("translations")
                                 .path("translatedText");
@@ -98,10 +98,9 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         translation.setStatus(true);
                         translation.setCreatedAt(Instant.now());
 
-                        // Aquí NO se guarda en la base, solo se devuelve para previsualizar
                         return translation;
-                    } catch (Exception e) {
-                        throw new RuntimeException("Error processing translation response", e);
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        throw new TranslationProcessingException("Error parsing translation response", e);
                     }
                 });
     }
@@ -121,8 +120,8 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         DetectionResponse resp = new DetectionResponse();
                         resp.setDetectedLang(detectionNode.path("language").asText());
                         return resp;
-                    } catch (Exception e) {
-                        throw new RuntimeException("Error processing detection response", e);
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        throw new TranslationProcessingException("Error parsing detection response", e);
                     }
                 });
     }
@@ -149,8 +148,8 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         LanguagesResponse resp = new LanguagesResponse();
                         resp.setLanguages(list);
                         return resp;
-                    } catch (Exception e) {
-                        throw new RuntimeException("Error processing languages response", e);
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        throw new TranslationProcessingException("Error parsing languages response", e);
                     }
                 });
     }

@@ -5,8 +5,6 @@ import java.time.Instant;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -14,6 +12,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import vallegrande.service.YoutubeDownloaderService;
 import vallegrande.dto.YoutubeDownloadRequest;
+import vallegrande.exception.YoutubeApiProcessingException;
 import vallegrande.model.YoutubeDownloader;
 import vallegrande.repository.YoutubeDownloaderRepository;
 
@@ -36,9 +35,9 @@ public class YoutubeDownloaderServiceImpl implements YoutubeDownloaderService {
                         .path("/ajax/download.php")
                         .queryParam("format", request.getFormat())
                         .queryParam("url", request.getVideoUrl())
-                        .queryParam("audio_quality", request.getAudio_quality())
-                        .queryParam("allow_extended_duration", request.isAllow_extended_duration())
-                        .queryParam("audio_language", request.getAudio_language())
+                        .queryParam("audio_quality", request.getAudioQuality())
+                        .queryParam("allow_extended_duration", request.isAllowExtendedDuration())
+                        .queryParam("audio_language", request.getAudioLanguage())
                         .build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -59,18 +58,18 @@ public class YoutubeDownloaderServiceImpl implements YoutubeDownloaderService {
                         downloader.setDownloadUrl(progressUrl); // inicial
                         downloader.setCreatedAt(Instant.now().toString());
                         return downloader;
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException("Error parsing JSON", e);
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        throw new YoutubeApiProcessingException("Error parsing JSON", e);
                     }
                 })
                 .flatMap(repository::save)
-                .flatMap(this::pollProgress); // intercepta el progress_url
+                .flatMap(this::pollProgress); 
     }
 
     private Mono<YoutubeDownloader> pollProgress(YoutubeDownloader downloader) {
-        return Flux.interval(Duration.ofSeconds(2)) // cada 2 segundos
+        return Flux.interval(Duration.ofSeconds(2)) 
                 .flatMap(i -> youtubeWebClient.get()
-                        .uri(downloader.getDownloadUrl()) // progress_url
+                        .uri(downloader.getDownloadUrl()) 
                         .retrieve()
                         .bodyToMono(String.class)
                         .map(resp -> {
@@ -82,13 +81,13 @@ public class YoutubeDownloaderServiceImpl implements YoutubeDownloaderService {
                                     downloader.setDownloadUrl(progressJson.path("download_url").asText());
                                 }
                                 return downloader;
-                            } catch (JsonProcessingException e) {
-                                throw new RuntimeException("Error parsing JSON", e);
+                            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                                throw new YoutubeApiProcessingException("Error parsing JSON", e);
                             }
                         }))
-                .filter(d -> !d.getDownloadUrl().contains("progress?id=")) // solo cuando ya cambió al final
-                .next() // termina el flujo en la primera vez que se obtiene el download_url final
-                .flatMap(repository::save); // update en MongoDB
+                .filter(d -> !d.getDownloadUrl().contains("progress?id="))
+                .next()
+                .flatMap(repository::save);
     }
 
     @Override

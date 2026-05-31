@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class WebClientConfig {
+    private static final String HEADER_RAPIDAPI_HOST = "X-RapidAPI-Host";
+    private static final String HEADER_RAPIDAPI_KEY = "X-RapidAPI-Key";
+
     @Value("${rapidapi.youtube.url}")
     private String youtubeUrl;
     @Value("${rapidapi.youtube.host}")
@@ -28,33 +31,30 @@ public class WebClientConfig {
     @Value("${rapidapi.tts.apikey}")
     private String ttsApiKey;
 
-    @SuppressWarnings("null")
     @Bean
     public WebClient youtubeWebClient() {
         return WebClient.builder()
                 .baseUrl(youtubeUrl)
-                .defaultHeader("X-RapidAPI-Host", youtubeHost)
-                .defaultHeader("X-RapidAPI-Key", youtubeApiKey)
+                .defaultHeader(HEADER_RAPIDAPI_HOST, youtubeHost)
+                .defaultHeader(HEADER_RAPIDAPI_KEY, youtubeApiKey)
                 .build();
     }
 
-    @SuppressWarnings("null")
     @Bean
     public WebClient translateWebClient() {
         return WebClient.builder()
                 .baseUrl(translateUrl)
-                .defaultHeader("X-RapidAPI-Host", translateHost)
-                .defaultHeader("X-RapidAPI-Key", translateApiKey)
+                .defaultHeader(HEADER_RAPIDAPI_HOST, translateHost)
+                .defaultHeader(HEADER_RAPIDAPI_KEY, translateApiKey)
                 .build();
     }
 
-    @SuppressWarnings("null")
     @Bean
     public WebClient ttsWebClient() {
         return WebClient.builder()
                 .baseUrl(ttsUrl)
-                .defaultHeader("X-RapidAPI-Host", ttsHost)
-                .defaultHeader("X-RapidAPI-Key", ttsApiKey)
+                .defaultHeader(HEADER_RAPIDAPI_HOST, ttsHost)
+                .defaultHeader(HEADER_RAPIDAPI_KEY, ttsApiKey)
                 .build();
     }
 }
