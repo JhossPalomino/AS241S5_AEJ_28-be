@@ -9,10 +9,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 import vallegrande.dto.translate.DetectionResponse;
 import vallegrande.dto.translate.LanguageResponse;
 import vallegrande.dto.translate.LanguagesResponse;
@@ -20,7 +22,6 @@ import vallegrande.exception.TranslationProcessingException;
 import vallegrande.model.DeepTranslate;
 import vallegrande.repository.DeepTranslateRepository;
 import vallegrande.service.DeepTranslateService;
-import reactor.core.publisher.Flux;
 
 @Service
 public class DeepTransladeServiceImpl implements DeepTranslateService {
@@ -30,11 +31,62 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public DeepTransladeServiceImpl(@Qualifier("translateWebClient") WebClient webClient,
-            DeepTranslateRepository repository) {
+                                    DeepTranslateRepository repository) {
         this.webClient = webClient;
         this.repository = repository;
     }
 
+    // 🔹 Helper genérico para parsear con manejo de excepción
+    private <T> T safeParse(String response, Parser<T> parser) {
+        try {
+            return parser.parse(response);
+        } catch (JsonProcessingException e) {
+            throw new TranslationProcessingException("Error parsing response", e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface Parser<T> {
+        T parse(String response) throws JsonProcessingException;
+    }
+
+    private DeepTranslate buildTranslation(String response, String text, String sourceLang, String targetLang)
+            throws JsonProcessingException {
+        JsonNode translatedArray = mapper.readTree(response)
+                .path("data").path("translations").path("translatedText");
+
+        String translatedText = translatedArray.isArray() && translatedArray.size() > 0
+                ? translatedArray.get(0).asText()
+                : "";
+
+        return DeepTranslate.builder()
+                .sourceLanguage(sourceLang)
+                .targetLanguage(targetLang)
+                .originalText(text)
+                .translatedText(translatedText)
+                .status(true)
+                .createdAt(Instant.now())
+                .build();
+    }
+
+    private DetectionResponse buildDetection(String response) throws JsonProcessingException {
+        JsonNode detectionNode = mapper.readTree(response)
+                .path("data").path("detections").get(0);
+        return new DetectionResponse(null, detectionNode.path("language").asText());
+    }
+
+    private LanguagesResponse buildLanguages(String response) throws JsonProcessingException {
+        List<LanguageResponse> list = new ArrayList<>();
+        for (JsonNode langNode : mapper.readTree(response).path("languages")) {
+            list.add(new LanguageResponse(
+                    langNode.path("language").asText(),
+                    langNode.path("name").asText()
+            ));
+        }
+        return new LanguagesResponse(list);
+    }
+
+    // 🔹 Métodos públicos
     @Override
     public Mono<DeepTranslate> translate(String text, String sourceLang, String targetLang) {
         return webClient.post()
@@ -42,31 +94,7 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                 .bodyValue(Map.of("q", text, "source", sourceLang, "target", targetLang))
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(response -> {
-                    try {
-                        JsonNode json = mapper.readTree(response);
-                        JsonNode translatedArray = json.path("data")
-                                .path("translations")
-                                .path("translatedText");
-
-                        String translatedText = "";
-                        if (translatedArray.isArray() && translatedArray.size() > 0) {
-                            translatedText = translatedArray.get(0).asText();
-                        }
-
-                        DeepTranslate translation = new DeepTranslate();
-                        translation.setSourceLanguage(sourceLang);
-                        translation.setTargetLanguage(targetLang);
-                        translation.setOriginalText(text);
-                        translation.setTranslatedText(translatedText);
-                        translation.setStatus(true);
-                        translation.setCreatedAt(Instant.now());
-
-                        return translation;
-                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                        throw new TranslationProcessingException("Error parsing translation response", e);
-                    }
-                })
+                .map(response -> safeParse(response, r -> buildTranslation(r, text, sourceLang, targetLang)))
                 .flatMap(repository::save);
     }
 
@@ -77,32 +105,7 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                 .bodyValue(Map.of("q", text, "source", sourceLang, "target", targetLang))
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(response -> {
-                    try {
-                        JsonNode json = mapper.readTree(response);
-
-                        JsonNode translatedArray = json.path("data")
-                                .path("translations")
-                                .path("translatedText");
-
-                        String translatedText = "";
-                        if (translatedArray.isArray() && translatedArray.size() > 0) {
-                            translatedText = translatedArray.get(0).asText();
-                        }
-
-                        DeepTranslate translation = new DeepTranslate();
-                        translation.setSourceLanguage(sourceLang);
-                        translation.setTargetLanguage(targetLang);
-                        translation.setOriginalText(text);
-                        translation.setTranslatedText(translatedText);
-                        translation.setStatus(true);
-                        translation.setCreatedAt(Instant.now());
-
-                        return translation;
-                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                        throw new TranslationProcessingException("Error parsing translation response", e);
-                    }
-                });
+                .map(response -> safeParse(response, r -> buildTranslation(r, text, sourceLang, targetLang)));
     }
 
     @Override
@@ -112,18 +115,7 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                 .bodyValue(Map.of("q", text))
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(response -> {
-                    try {
-                        JsonNode json = mapper.readTree(response);
-                        JsonNode detectionNode = json.path("data").path("detections").get(0);
-
-                        DetectionResponse resp = new DetectionResponse();
-                        resp.setDetectedLang(detectionNode.path("language").asText());
-                        return resp;
-                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                        throw new TranslationProcessingException("Error parsing detection response", e);
-                    }
-                });
+                .map(response -> safeParse(response, this::buildDetection));
     }
 
     @Override
@@ -132,26 +124,7 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                 .uri("/languages")
                 .retrieve()
                 .bodyToMono(String.class)
-                .map(response -> {
-                    try {
-                        JsonNode json = mapper.readTree(response);
-                        JsonNode languagesNode = json.path("languages");
-
-                        List<LanguageResponse> list = new ArrayList<>();
-                        for (JsonNode langNode : languagesNode) {
-                            LanguageResponse lang = new LanguageResponse();
-                            lang.setLanguage(langNode.path("language").asText());
-                            lang.setName(langNode.path("name").asText());
-                            list.add(lang);
-                        }
-
-                        LanguagesResponse resp = new LanguagesResponse();
-                        resp.setLanguages(list);
-                        return resp;
-                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                        throw new TranslationProcessingException("Error parsing translation response", e);
-                    }
-                });
+                .map(response -> safeParse(response, this::buildLanguages));
     }
 
     @Override
