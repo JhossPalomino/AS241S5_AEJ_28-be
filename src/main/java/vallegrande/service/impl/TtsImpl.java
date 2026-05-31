@@ -38,7 +38,7 @@ public class TtsImpl implements TtsService {
     public Mono<String> saveAudio(byte[] audio, String filename) {
         DataBuffer buffer = new DefaultDataBufferFactory().wrap(audio);
         return gridFsTemplate.store(
-                Mono.just(buffer), // Publisher<DataBuffer>
+                Flux.just(buffer), 
                 filename,
                 "audio/mpeg").map(ObjectId::toHexString);
     }
