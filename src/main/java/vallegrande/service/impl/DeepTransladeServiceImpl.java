@@ -149,7 +149,7 @@ public class DeepTransladeServiceImpl implements DeepTranslateService {
                         resp.setLanguages(list);
                         return resp;
                     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-                        throw new TranslationProcessingException("Error parsing languages response", e);
+                        throw new TranslationProcessingException("Error parsing translation response", e);
                     }
                 });
     }
